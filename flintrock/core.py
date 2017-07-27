@@ -544,15 +544,27 @@ def ensure_java8(client: paramiko.client.SSHClient):
             command="""
                 set -e
 
-                # Install Java 1.8 first to protect packages that depend on Java from being removed.
-                sudo yum install -y java-1.8.0-openjdk
+                cd /tmp
 
-                # Remove any older versions of Java to force the default Java to 1.8.
-                # We don't use /etc/alternatives because it does not seem to update links in /usr/lib/jvm correctly,
-                # and we don't just rely on JAVA_HOME because some programs use java directly in the PATH.
-                sudo yum remove -y java-1.6.0-openjdk java-1.7.0-openjdk
+                readonly url="http://www.oracle.com"
+                readonly jdk_download_url1="$url/technetwork/java/javase/downloads/index.html"
+                readonly jdk_download_url2=$(curl -s $jdk_download_url1 | egrep -o "\/technetwork\/java/\javase\/downloads\/jdk8-downloads-.+?\.html" | head -1 | cut -d '"' -f 1)
+                [[ -z "$jdk_download_url2" ]] && error "Could not get jdk download url - $jdk_download_url1"
+                
+                readonly jdk_download_url3="${url}${jdk_download_url2}"
+                readonly jdk_download_url4=$(curl -s $jdk_download_url3 | egrep -o "http\:\/\/download.oracle\.com\/otn-pub\/java\/jdk\/[7-8]u[0-9]+\-(.*)+\/jdk-[7-8]u[0-9]+(.*)linux-x64.rpm")
+                
+                for dl_url in ${jdk_download_url4[@]}; do
+                    wget --no-cookies --no-check-certificate --header "Cookie: oraclelicense=accept-securebackup-cookie" -N $dl_url
+                done
+                
+                sudo yum remove -y java-1.8.0-openjdk*
+                
+                sudo yum localinstall -y ./jdk-8u144-linux-x64.rpm
+                
+                sudo yum remove -y java-1.6.0-openjdk java-1.7.0-openjdk java-1.8.0-openjdk*
 
-                sudo sh -c "echo export JAVA_HOME=/usr/lib/jvm/jre >> /etc/environment"
+                sudo sh -c "echo export JAVA_HOME=/usr/java/default/jre >> /etc/environment"
                 source /etc/environment
             """)
 
