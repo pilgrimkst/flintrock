@@ -537,7 +537,7 @@ def ensure_java8(client: paramiko.client.SSHClient):
     java_major_version = get_java_major_version(client)
 
     if not java_major_version or java_major_version < (1, 8):
-        logger.info("[{h}] Installing Java 1.8...".format(h=host))
+        logger.info("[{h}] Installing Oracle Java 1.8...".format(h=host))
 
         ssh_check_output(
             client=client,
